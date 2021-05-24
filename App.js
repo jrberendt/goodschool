@@ -13,8 +13,7 @@ const config = {
   projectId: "YOUR PROJECTID",
 }
 firebase.initializeApp(config);
-const uiConfig = {
-  
+const uiConfig = { 
   signInFlow: 'popup',
   signInOptions: [
     firebase.auth.EmailAuthProvider.PROVIDER_ID,
@@ -41,6 +40,7 @@ function SignIn() {
         <StyledFirebaseAuth uiConfig={uiConfig} firebaseAuth={firebase.auth()} />
         <p>GoodSchool is an open-source, free, and fast alternative to products like Google Classroom and Apple Classroom. Copyright 2021 Jack Berendt.</p>
         <p>Warning: this is the first alpha version. The whole project was made in one week. Use at your own risk!</p>
+        <a href={'https://github.com/jrberendt/goodschool'}>Code on Github</a>
       </div>
     );
   }
@@ -58,8 +58,7 @@ function createClass(classname){
   }
 }
 function joinClass(classcode){
-  if(classcode !== undefined){
-  if (classcode !== ''){
+  if(classcode !== undefined && classcode !== '' && classcode.includes('-') !== false){
   var uid = classcode.split('-')
   if (uid[0] !== firebase.auth().currentUser.uid){
   firebase.database().ref('classes/' + uid[0] + "/" + uid[1] + "/students/" + firebase.auth().currentUser.displayName).set(firebase.auth().currentUser.displayName).catch(error => {console.log(error.message)})
@@ -69,8 +68,8 @@ function joinClass(classcode){
     alert("You cannot be a student of your own class!")
   }
 }else{
-  alert('Classname cannot be empty.')
-}}}
+  alert('Entered incorrect classcode.')
+}}
 function deleteItem(uid, classroom, classcode){
   if(window.confirm("You are about to delete this class. Are you sure?")){
     firebase.database().ref('classes/' + uid.trim() + "/" + classroom).remove().catch(error => console.log(error.message))
@@ -112,6 +111,8 @@ class App extends Component {
     description: '',
     title: '',
     comment: '',
+    link: '',
+    links: [],
   };
   handleClasses = () => {
     let str = '';
@@ -218,6 +219,9 @@ class App extends Component {
   handleDesc = event => {
     this.setState({ description: event.target.value})
   }
+  handleLinks = event => {
+    this.setState({ link: event.target.value})
+  }
   joinCodeShow = (props) => {
     if(this.state.persontype[this.state.classname.indexOf(props.classcode)] === "Teacher"){
       return(
@@ -237,7 +241,7 @@ class App extends Component {
   }
   createClassData = (classnumber, classname) => {
     if (this.state.title !== ''){
-    firebase.database().ref('classes/' + this.state.uids[classnumber].trim() + '/' + classname + '/data/' + Math.floor(Date.now() / 1000)).set([Math.floor(Date.now() / 1000), new Date().toLocaleString().replace(",","").replace(/:.. /," ") + ": " + this.state.title, this.state.description]).catch(error => {console.log(error.message)})
+    firebase.database().ref('classes/' + this.state.uids[classnumber].trim() + '/' + classname + '/data/' + Math.floor(Date.now() / 1000)).set([Math.floor(Date.now() / 1000), new Date().toLocaleString().replace(",","").replace(/:.. /," ") + ": " + this.state.title, this.state.description, this.state.links]).catch(error => {console.log(error.message)})
     alert('Assignment Created. The page will now reload.')
     window.location.reload();}
     else{
@@ -267,6 +271,14 @@ class App extends Component {
     }
     else{
     return(null)}}
+  listLinks = (data) => {
+    if (data !== undefined){
+    let links = data.map(link => {return(<li><a href={link}>{link}</a></li>)})
+    return(<ul>{links}</ul>)}
+    else{
+      return(<p>No links or attachments.</p>)
+    }
+  }
   getClassData = (props) => {
     if(props.teacher === null){
       return(
@@ -274,10 +286,10 @@ class App extends Component {
       )
     }
     else{
-      let listClassData = props.data.reverse().map((data) => {
+      let listClassData = [].concat(props.data).reverse().map((data) => {
         return(
         <li key={data[0]}>
-        <Popup trigger={<Button>{data[1]}</Button>} modal nested><div id='options-popup'><h3>{data[1]}</h3><p>{data[2]}</p>{this.comment(props.classcode, data[1], data[0])}{this.commentList(data)}{this.materialDeleteShow(props.classcode, data[0])}</div></Popup>
+        <Popup trigger={<Button>{data[1]}</Button>} modal nested><div id='options-popup'><h3>{data[1]}</h3><h4>{data[2]}</h4>{this.listLinks(data[3])}{this.comment(props.classcode, data[1], data[0])}{this.commentList(data)}{this.materialDeleteShow(props.classcode, data[0])}</div></Popup>
         </li>
       )
       })
@@ -301,6 +313,8 @@ class App extends Component {
           <div id='options-popup'>
             <Input placeholder='Title of Material' onChange={this.handleTitle}></Input>
             <Input placeholder='Description' onChange={this.handleDesc}></Input>
+            <Input placeholder='Add a link' onChange={this.handleLinks}></Input>
+            <Button onClick={() => {this.setState(prevState => ({links: [...prevState.links, this.state.link]}))}}>Add Link</Button>
             <Button onClick={() => {this.createClassData(this.state.classname.indexOf(props.classcode), props.classcode)}}>Create Material</Button>
           </div>
           </Popup>)}
